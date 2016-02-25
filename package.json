@@ -1,0 +1,16 @@
+{
+  "name": "xdms_proxy",
+  "version": "1.0.0",
+  "description": "http proxy server that proxies the requests to xdms server",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Rajmohan",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.7.1",
+    "express": "^4.13.4",
+    "http-proxy": "^1.13.1"
+  }
+}
