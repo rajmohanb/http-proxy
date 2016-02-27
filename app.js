@@ -2,7 +2,7 @@ var express = require('express');
 var httpProxy = require('http-proxy');
 var cors = require('cors');
 
-var apiForwardingUrl = 'http://10.3.12.211:8082/';
+var authForwardingUrl = 'http://10.3.12.211:8082/';
 var webForwardingUrl = 'http://10.3.12.211:8080/';
 
 var authServer = express();
@@ -38,7 +38,7 @@ authProxy.on('proxyRes', function (proxyRes, req, res, options) {
 authServer.all("/*", function (req, res) {
     console.log("Reqest received: " + req);
     authProxy.web(req, res, {
-        target: apiForwardingUrl
+        target: authForwardingUrl
         //hostRewrite: locRewrite
     });
 });
