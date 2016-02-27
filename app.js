@@ -3,51 +3,59 @@ var httpProxy = require('http-proxy');
 var cors = require('cors');
 
 var apiForwardingUrl = 'http://10.3.12.211:8082/';
-var locRewrite = "http://localhost:8080/";
+var webForwardingUrl = 'http://10.3.12.211:8080/';
 
-var server = express();
-server.set('port', 8082);
-server.use(express.static(__dirname + '/app'));
-server.use(cors());
+var authServer = express();
+authServer.set('port', 8082);
+authServer.use(express.static(__dirname + '/app'));
+authServer.use(cors());
 
-var options = {
-  router : {
-    'example.com': '127.0.0.1:3001',
-    'sample.com': '127.0.0.1:3002',
-    '^.*\.sample\.com': '127.0.0.1:3002',
-    '.*': '127.0.0.1:3000'
+var webServer = express();
+webServer.set('port', 8080);
+webServer.use(express.static(__dirname + '/app'));
+webServer.use(cors());
+
+var authProxy = httpProxy.createProxyServer();
+var webProxy = httpProxy.createProxyServer();
+
+authProxy.on('error', function(e) {
+    console.log("Auth Proxy => Some error happened: " + JSON.stringify(e));
+});
+
+webProxy.on('error', function(e) {
+    console.log("Web Proxy => Some error happened: " + JSON.stringify(e));
+})
+
+authProxy.on('proxyRes', function (proxyRes, req, res, options) {
+  //console.log('RAW Response from the target', JSON.stringify(proxyRes.headers, true, 2));
+  //console.log("This is the location header value: " + proxyRes.headers.location);
+  if (proxyRes.headers.location) {
+      console.log("Location found, so operating: " + proxyRes.headers.location);
+      proxyRes.headers.location = proxyRes.headers.location.replace("10.3.12.211", "localhost");
   }
-};
-
-var apiProxy = httpProxy.createProxyServer();
-
-apiProxy.on('error', function(e) {
-    console.log("Some error happened: " + JSON.stringify(e));
 });
 
-apiProxy.on('proxyRes', function (proxyRes, req, res, options) {
-  console.log('RAW Response from the target', JSON.stringify(proxyRes.headers, true, 2));
-  //var locationPath = proxyRes.headers.location;
-  //console.log("Type of locationPath: " + typeof(locationPath));
-  //proxyRes.headers.location = "http://localhost:8082";
-  //console.log('RAW Response from the target', + JSON.stringify(proxyRes.headers, true, 2));
-  //console.log("This is your culprit: " + locationPath);
-  //var fixit  = locationPath.replace("10.3.12.211", "localhost");
-  proxyRes.headers.location = proxyRes.headers.location.replace("10.3.12.211", "localhost");
-  //console.log("This is the reformed culprit: " + fixit);
-  //proxyRes.headers.location = fixit;
-  console.log('RAW Response from the target after applying FIXIT: ', JSON.stringify(proxyRes.headers, true, 2));
-});
-
-server.all("/*", function (req, res) {
+authServer.all("/*", function (req, res) {
     console.log("Reqest received: " + req);
-    apiProxy.web(req, res, {
+    authProxy.web(req, res, {
         target: apiForwardingUrl
         //hostRewrite: locRewrite
     });
 });
 
 
-server.listen(server.get('port'), function () {
-    console.log('Proxy server listening on port ' + server.get('port'));
+webServer.all('/*', function (req, res) {
+    console.log("Reqest received: " + req);
+    webProxy.web(req, res, {
+        target: webForwardingUrl
+  });
+});
+
+
+authServer.listen(authServer.get('port'), function () {
+    console.log('Auth proxy server listening on port ' + authServer.get('port'));
+});
+
+webServer.listen(webServer.get('port'), function () {
+    console.log('Auth proxy server listening on port ' + webServer.get('port'));
 });
